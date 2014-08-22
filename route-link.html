@@ -1,0 +1,188 @@
+<!--
+Element to create links to set application state. Inspects `window.Route` to generate links.
+This must be nested under a `<route-root>` element to function properly.
+
+##### Example
+
+    <style>
+        route-link[active] { color: red }
+        route-link[childActive] { color: blue }
+    </style>
+    <route-link state="section2" label="Go to Section 2"></route-link>
+    <route-link state="section2.dynamic" label="{{data.label}}" data="{{data}}"></route-link>
+    <route-link state="section2.dynamic" label="{{foo}}" json='{"foo" : "{{foo}}"}'></route-link>
+
+
+@element route-link
+@blurb Element to create links to set application state
+@status alpha
+@homepage http://polymerlabs.github.io/seed-element
+-->
+<polymer-element name="route-link" attributes="state data label json watch">
+    <template>
+        <link rel="stylesheet" href="route-link.css" />
+        <a href="{{url}}" on-click="{{fireChange}}"> {{ label }}</a>
+    </template>
+    <script>
+        Polymer('route-link',{
+            publish: {
+                /**
+                 *
+                 * @attribute state
+                 * @type string
+                 *
+                 * the state to link to when clicked
+                 */
+                state: "",
+                /**
+                 *
+                 * @attribute label
+                 * @type string
+                 *
+                 * The text used for the link
+                 */
+                label: "No Label",
+                /**
+                 *
+                 * @attribute json
+                 * @type string
+                 *
+                 * JSON string that will be parsed and set as the `data` property
+                 */
+                json: undefined,
+                /**
+                 *
+                 * @attribute data
+                 * @type object
+                 *
+                 * passed to the state and used to replace any dynamic URL variables
+                 */
+                data: {},
+                /**
+                 *
+                 * @property active
+                 * @type bool
+                 * @default false
+                 *
+                 * applied to the element when the `state` is active
+                 */
+                active: {
+                    value: false,
+                    reflect: true
+                },
+                /**
+                 *
+                 * @property childActive
+                 * @type bool
+                 * @default false
+                 *
+                 * applied to the element when a child state is active
+                 */
+                childActive: {
+                    value: false,
+                    reflect: true
+                },
+                /**
+                 *
+                 * @property url
+                 * @type string
+                 *
+                 * passed to the state and used to replace any dynamic URL variables
+                 */
+                url: ""
+            },
+            /**
+             * When the DOM is ready we need to set the initial values of the URL, active, and childActive
+             * Also set up watchers to notify if the state's active or childActive changes so we can update this element accordingly
+             *
+             */
+            domReady: function(){
+                this.updateURL();
+                this.active = Path.get(this.state+".$element.active").getValueFrom(Route.children);
+                this.childActive = Path.get(this.state+".$element.childActive").getValueFrom(Route.children);
+                this.setupWatchers();
+            },
+            setupWatchers: function(){
+                this.activeObserver = new PathObserver(Route.children, this.state+".$element.active");
+                this.activeObserver.open(this.routeActiveChanged.bind(this));
+
+                this.childActiveObserver = new PathObserver(Route.children, this.state+".$element.childActive");
+                this.childActiveObserver.open(this.routeChildActiveChanged.bind(this));
+            },
+            stopWatchers: function(){
+              if(this.activeObserver != undefined){
+                  this.activeObserver.close();
+              }
+              if(this.childActiveObserver != undefined){
+                  this.childActiveObserver.close();
+              }
+            },
+            stateChanged: function(){
+                this.stopWatchers();
+                this.setupWatchers();
+            },
+            routeActiveChanged: function(newVal){
+              this.active = newVal;
+            },
+            routeChildActiveChanged: function(newVal){
+                this.childActive = newVal;
+            },
+            jsonChanged: function(){
+                this.data = JSON.parse(this.json);
+            },
+            dataChanged: function(){
+                this.async(this.updateURL);
+            },
+            updateURL: function(){
+                this.baseURL = Route.root.getUrl(this.state);
+                this.replaceData();
+
+            },
+            replaceData: function(){
+                // if there is a colon in the route we need to substitute it with the data
+                var data = this.data;
+                var segments = this.baseURL.split("/");
+                segments = segments.map(function(x){
+                    if(x.charAt(0) == ":"){
+                        var varname = x.substring(1,x.length);
+                        if(data != undefined && data[varname] != undefined){
+                            return data[varname];
+                        } else {
+                            return "unset";
+                        }
+                    } else {
+                        return x;
+                    }
+                });
+
+
+                this.url = segments.join("/");
+            },
+
+            /**
+             *
+             * @event routechange
+             * @param {Object} detail
+             *   @param {string} detail.sound An amazing sound.
+             *
+             * The `routechange` event is fired along with the on-click event of the link
+             */
+
+            /**
+             *
+             * @method fireChange
+             *
+             * executed when the link is clicked. Fires the `routechange` event containing the url, state, and data of this element
+             */
+            fireChange: function(e){
+                e.preventDefault();
+
+                this.fire('routechange',{
+                    url: this.url,
+                    state: this.state,
+                    data: this.data
+                });
+            }
+        });
+    </script>
+</polymer-element>
