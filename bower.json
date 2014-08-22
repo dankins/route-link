@@ -8,7 +8,7 @@
   "keywords": "polymer, web-components, router",
   "main": "route-link.html",
   "license": "MIT",
-  "homepage": "https://github.com/dankins/route-link",
+  "homepage": "https://github.com/SurfTV/route-link",
   "ignore": [
     "**/.*"
   ],
