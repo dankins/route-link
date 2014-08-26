@@ -21,7 +21,7 @@ This must be nested under a `<route-root>` element to function properly.
 <polymer-element name="route-link" attributes="state data label json watch">
     <template>
         <link rel="stylesheet" href="route-link.css" />
-        <a href="{{url}}" on-click="{{fireChange}}"> {{ label }}</a>
+        <a href="{{url}}" on-click="{{fireChange}}"> {{ label }}<content></content></a>
     </template>
     <script>
         Polymer('route-link',{
@@ -41,7 +41,7 @@ This must be nested under a `<route-root>` element to function properly.
                  *
                  * The text used for the link
                  */
-                label: "No Label",
+                label: "",
                 /**
                  *
                  * @attribute json
@@ -110,19 +110,19 @@ This must be nested under a `<route-root>` element to function properly.
                 this.childActiveObserver.open(this.routeChildActiveChanged.bind(this));
             },
             stopWatchers: function(){
-              if(this.activeObserver != undefined){
-                  this.activeObserver.close();
-              }
-              if(this.childActiveObserver != undefined){
-                  this.childActiveObserver.close();
-              }
+                if(this.activeObserver != undefined){
+                    this.activeObserver.close();
+                }
+                if(this.childActiveObserver != undefined){
+                    this.childActiveObserver.close();
+                }
             },
             stateChanged: function(){
                 this.stopWatchers();
                 this.setupWatchers();
             },
             routeActiveChanged: function(newVal){
-              this.active = newVal;
+                this.active = newVal;
             },
             routeChildActiveChanged: function(newVal){
                 this.childActive = newVal;
@@ -134,29 +134,10 @@ This must be nested under a `<route-root>` element to function properly.
                 this.async(this.updateURL);
             },
             updateURL: function(){
-                this.baseURL = Route.root.getUrl(this.state);
-                this.replaceData();
+                this.baseURL = Route.root.getUrl(this.state,this.data);
+                this.url = this.baseURL;
+                //this.url = Route.root.replaceData(this.data);
 
-            },
-            replaceData: function(){
-                // if there is a colon in the route we need to substitute it with the data
-                var data = this.data;
-                var segments = this.baseURL.split("/");
-                segments = segments.map(function(x){
-                    if(x.charAt(0) == ":"){
-                        var varname = x.substring(1,x.length);
-                        if(data != undefined && data[varname] != undefined){
-                            return data[varname];
-                        } else {
-                            return "unset";
-                        }
-                    } else {
-                        return x;
-                    }
-                });
-
-
-                this.url = segments.join("/");
             },
 
             /**
@@ -175,7 +156,10 @@ This must be nested under a `<route-root>` element to function properly.
              * executed when the link is clicked. Fires the `routechange` event containing the url, state, and data of this element
              */
             fireChange: function(e){
-                e.preventDefault();
+                if(e != undefined){
+                    e.preventDefault();
+                }
+
 
                 this.fire('routechange',{
                     url: this.url,
